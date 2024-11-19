@@ -1,0 +1,47 @@
+version: '2'
+
+services:
+  db:
+    image: mariadb
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${MYSQL_DATABASE}
+      MYSQL_USER: ${MYSQL_USER}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+    volumes:
+      - mysql-datavolume:/var/lib/mysql
+    restart: unless-stopped
+
+  wp:
+    image: wordpress:fpm-alpine
+    environment:
+      WORDPRESS_DB_HOST: db:3306
+      WORDPRESS_DB_NAME: ${MYSQL_DATABASE}
+      WORDPRESS_DB_USER: ${MYSQL_USER}
+      WORDPRESS_DB_PASSWORD: ${MYSQL_PASSWORD}
+      WORDPRESS_TABLE_PREFIX: ${WORDPRESS_TABLE_PREFIX}
+    depends_on:
+      - db
+    volumes:
+      - ${WP_CONTENT}:/var/www/html/wp-content
+      - wordpress:/var/www/html
+    restart: unless-stopped
+
+  nginx:
+    image: nginx:alpine
+    volumes:
+      - ./nginx:/etc/nginx/conf.d
+      - wordpress:/var/www/html
+      - ${WP_CONTENT}:/var/www/html/wp-content
+      - ./le/certs:/etc/letsencrypt
+      - ./le/data:/data/letsencrypt
+    ports:
+      - '80:80'
+      - '443:443'
+    depends_on:
+      - wp
+    restart: unless-stopped
+
+volumes:
+  mysql-datavolume:
+  wordpress:
